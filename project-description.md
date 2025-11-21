@@ -12,7 +12,7 @@ The assignment content is located in `proj02-nlp.ipynb`.
 - Implement Modern NLP Pipelines: 
     - Load and Prepare Data: Ingest and clean a real-world text dataset using pandas.
     - Process Text Efficiently: Implement a text pre-processing pipeline using spaCy, a production-grade NLP library.
-    - Understand Core Concepts: Understand the diffence between a token, a lemma, a stop word, and punctuation, and understand why lemmatization was preferred for text analysis prior to LLMs.
+    - Understand Core Concepts: Understand the difference between a token, a lemma, a stop word, and punctuation, and understand why lemmatization was preferred for text analysis prior to LLMs.
 
 - Conduct Core Text Analysis:
     - Extract Linguistic Features: Use spaCy to efficiently extract lemmas, parts-of-speech, and named entities from raw text.
@@ -28,7 +28,7 @@ The assignment content is located in `proj02-nlp.ipynb`.
 - Reproducibility and Collaboration:
     - Work on more open-ended questions that involve self learning, utilization of external resources, and exploration
     - Collaboration on Complex Projects: Gain experience coordinating on teams to complete tasks with dependencies on each other
-    - Reproducibility: Gain experience describing your work in accessibile formats and making it reproducible.
+    - Reproducibility: Gain experience describing your work in accessible formats and making it reproducible.
 
 **Deliverables:** For this assignment, you will have a single GitHub repository for your group. Your repository should contain the following:
 
@@ -60,6 +60,6 @@ Parts 1-4 will each be graded from their respective notebooks. Part 5 will be gr
 
 When running your analyses and making plots, it may be useful to save intermediate steps, such as vectorized data files and then read them in order to make just the plots.
 
-**Note: The parts successively build on each other, so you will need to strategize how to divde and conquer in your groups. For example, some topic models from part 3 require the vectorization used in part 2.**
+**Note: The parts successively build on each other, so you will need to strategize how to divide and conquer in your groups. For example, some topic models from part 3 require the vectorization used in part 2.**
 
 **Acknowledgment:** This homework assignment has been revamped from the previous Spring 2017 assignment created by Prof Fernando Perez and Eli Ben-Michael, adapted from Prof Deb Nolan previous version of this project. The data from the project is from a Kaggle dataset here: https://www.kaggle.com/datasets/nicholasheyerdahl/state-of-the-union-address-texts-1790-2024?resource=download 
