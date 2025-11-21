@@ -4,4 +4,6 @@
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/UCB-stat-159-f25/proj02-group06.git/HEAD)
 
+[Link to MyST Site](https://ucb-stat-159-f25.github.io/proj02-group06/)
+
 
