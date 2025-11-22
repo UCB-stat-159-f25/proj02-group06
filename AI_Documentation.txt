@@ -1119,4 +1119,58 @@ print(f"The most similar speeches were delivered by {names[i]} and {names[j]}")
 ________________
 
 
+
 If you want, I can write a full ready-to-run snippet that finds the top 3 most similar president speeches and prints their names and similarity scores automatically.
+
+
+Param
+I used OpenAI's ChatGPT to understand some errors I encountered and to understand how to save some new figure types to the outputs directory.
+
+Prompt: from bertopic import BERTopic is giving ModuleNotFoundError: No module named 'bertopic'
+Response: A ModuleNotFoundError: No module named 'bertopic' means BERTopic isn’t installed in your environment, or it’s installed in a different environment than the one you're running.
+Here’s how to fix it depending on your setup:
+✅ 1. Install BERTopic Properly
+If using pip
+pip install bertopic
+If using pip in Jupyter Notebook
+Run this inside a cell:
+!pip install bertopic
+✅ 2. If you’re in a conda environment
+BERTopic requires some extra dependencies. Run:
+conda install -c conda-forge bertopic
+or if conda can’t find it:
+pip install bertopic
+Make sure you're installing into the same env that Jupyter uses:
+which python
+which pip
+
+Prompt: i did : lda_display = pyLDAvis.gensim_models.prepare(lda_model, corpus, dictionary) pyLDAvis.display(lda_display) is there any way to save this output to a folder? 
+Response: Yes — you can save a pyLDAvis visualization as an HTML file and store it in a folder. You don’t need to display it in Jupyter to save it.
+Here’s how:
+import pyLDAvis
+# Save the visualization as an HTML file
+pyLDAvis.save_html(lda_display, 'output/lda_visualization.html')
+Notes:
+	1	Make sure the folder exists:
+import os
+os.makedirs('output', exist_ok=True)
+	2	You can then open the HTML in a browser:
+	•	On your local machine: just double-click the file
+	•	Or in Jupyter: File → Open → output/lda_visualization.html
+	3	You can also share the HTML with others — they don’t need Python installed to view it.
+
+Prompt: how to save topic_model.visualize_distribution(topic_distr[0]) and topic_model.visualize_topics() to outputs direc
+Response: You can save both BERTopic visualizations to your outputs/ directory — they’re interactive plots, so they should be saved as HTML files.
+Here’s exactly how.
+1. Make sure the directory exists
+import os
+os.makedirs("outputs", exist_ok=True)
+2. Save the topic distribution visualization
+If this works for you:
+fig_dist = topic_model.visualize_distribution(topic_distr[0])
+Save it like this:
+fig_dist.write_html("outputs/topic_distribution_doc0.html")
+3. Save the topic overview visualization
+fig_topics = topic_model.visualize_topics()
+fig_topics.write_html("outputs/topic_overview.html")
+
