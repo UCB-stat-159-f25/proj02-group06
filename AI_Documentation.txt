@@ -1,0 +1,1176 @@
+﻿Ethan
+
+
+(ChatGPT)
+Input: 
+I am attempting to run a Jupyter Notebook in a JupyterHub server, but it doesn't open in the environment I need it to. I activated the environment in my terminal prior to making my notebook, but when I check the environment information using sys.executable in the notebook, it says I am in a different environment.
+
+
+Output: 
+This happens because activating a Conda/virtual environment in a terminal does not automatically make that environment available as a Jupyter kernel in JupyterHub.
+JupyterHub launches notebooks using kernels, not your terminal shell.
+So even if you run:
+conda activate myenv
+
+
+…JupyterHub will still open notebooks with whatever kernels it already knows about (often python3), not your activated env.
+________________
+
+
+✅ How to fix it (install your environment as a Jupyter kernel)
+Inside the environment you want (in Terminal):
+1. Activate your target environment:
+
+conda activate myenv
+
+
+   2. Install ipykernel inside it (only needed once):
+
+pip install ipykernel
+
+
+      3. Register this environment as a Jupyter kernel:
+
+python -m ipykernel install --user --name myenv --display-name "Python (myenv)"
+
+
+________________
+
+
+🎉 Result
+When you open JupyterHub → New Notebook
+you will see a new option:
+Python (myenv)
+Selecting it launches the notebook inside that environment, and then:
+import sys
+print(sys.executable)
+
+
+will show something like:
+/home/jovyan/.conda/envs/myenv/bin/python
+
+
+________________
+
+
+⚠️ If you need the kernel only for JupyterHub (not local)
+Some JupyterHub deployments store kernels globally.
+If --user does nothing, try:
+python -m ipykernel install --name myenv --display-name "Python (myenv)"
+
+
+or ask your admin to install it.
+________________
+
+
+🔍 Want to remove an old kernel?
+jupyter kernelspec list
+jupyter kernelspec remove oldkernelname
+
+
+________________
+
+
+If you want, paste the output of:
+import sys
+print(sys.executable)
+
+
+and I can help confirm which environment JupyterHub is actually using.
+Input: 
+When I got to open a new notebook, I only see the original environment options, not the new kernel for the new environment
+
+
+Output:
+If the new environment does not appear in JupyterHub, one of the following is happening:
+________________
+
+
+✅ 1. The kernel was installed into the wrong location
+This is the most common cause on JupyterHub systems.
+Run this inside your desired environment:
+python -m ipykernel install --user --name myenv --display-name "Python (myenv)"
+
+
+Then check where JupyterHub looks for kernels:
+jupyter kernelspec list
+
+
+You should see something like:
+myenv          /home/youruser/.local/share/jupyter/kernels/myenv
+python3        /opt/conda/share/jupyter/kernels/python3
+
+
+If myenv does not show up, then JupyterHub is using system-level kernel locations that ignore your --user install.
+________________
+
+
+✅ 2. Try installing the kernel globally (if allowed)
+Inside your environment:
+python -m ipykernel install --name myenv --display-name "Python (myenv)" --prefix=/usr/local
+
+
+Or sometimes:
+python -m ipykernel install --prefix=$CONDA_PREFIX --name myenv
+
+
+If this errors due to permissions, then JupyterHub requires admin installation.
+________________
+
+
+✅ 3. Your JupyterHub uses a different Python for kernels
+Some JupyterHub setups use a shared kernel Python.
+Check this:
+which jupyter
+
+
+If it points to something outside your Conda environment, then installing kernels inside your env won’t be visible.
+Solution:
+Run:
+conda activate myenv
+python -m ipykernel install --user --name myenv
+
+
+AND start JupyterHub from the same environment if you are running it yourself.
+If you are not running the JupyterHub server yourself, skip to Step 4.
+________________
+
+
+✅ 4. Your JupyterHub is centrally managed
+Many university/department JupyterHubs do not allow user-level kernels.
+Clues this is the case:
+         * You run python -m ipykernel install --user ... and it "succeeds"
+
+         * jupyter kernelspec list shows the new kernel
+
+         * But JupyterHub does not show it
+
+Why?
+Because the Hub ignores user kernels and only loads from system paths like:
+/usr/local/share/jupyter/kernels/
+/opt/conda/share/jupyter/kernels/
+
+
+✔️ Solution:
+You must ask the admin to install the kernel for you.
+Admins run:
+conda activate myenv
+python -m ipykernel install --name myenv --display-name "Python (myenv)" --prefix=/usr/local
+
+
+________________
+
+
+🔍 Want help diagnosing?
+Please copy/paste the output of these three commands:
+Inside the target environment:
+which python
+which jupyter
+jupyter kernelspec list
+
+
+These three lines will tell me exactly why the kernel isn’t appearing and what you can do next.
+Happy to help you debug — just paste the output!
+Input: 
+These are the outputs:
+/home/jovyan/.local/share/envs/sotu/bin/python
+/home/jovyan/.local/share/envs/sotu/bin/jupyter
+Available kernels:
+  python3    /home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/python3
+  sotu       /home/jovyan/.local/share/jupyter/kernels/sotu
+
+
+Output:
+Great — these outputs tell us exactly what is going on.
+Let’s interpret:
+which python:
+/home/jovyan/.local/share/envs/sotu/bin/python
+which jupyter:
+/home/jovyan/.local/share/envs/sotu/bin/jupyter
+
+
+This means:
+✅ You installed and activated your sotu environment correctly
+AND
+❗ The jupyter command you are invoking in the terminal comes from INSIDE that environment — so the kernel installation you ran was correct.
+Then:
+jupyter kernelspec list:
+  python3    /home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/python3
+  sotu       /home/jovyan/.local/share/jupyter/kernels/sotu
+
+
+This tells us:
+The environment's internal Python kernel (python3) is registered under:
+
+/home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/python3
+            * The kernel you installed (sotu) is stored in your user-level location:
+
+/home/jovyan/.local/share/jupyter/kernels/sotu
+            * So far — everything is correct.
+________________
+
+
+❗ Why it still does not appear in JupyterHub
+This is the key insight:
+➤ Even though the kernel is installed, JupyterHub ignores user-level kernels.
+Your kernel is here:
+/home/jovyan/.local/share/jupyter/kernels/sotu
+
+
+But the Hub only shows kernels located in shared system paths such as:
+/usr/local/share/jupyter/kernels
+/opt/conda/share/jupyter/kernels
+
+
+This is very common on managed JupyterHub installations.
+So your kernel exists — you can see it — but the Hub does not load kernels from users’ home directories for security / environment isolation reasons.
+________________
+
+
+✅ How to fix it (two options)
+________________
+
+
+Option A — Install the kernel into the environment’s kernel directory
+Since JupyterHub does see this directory:
+/home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/
+
+
+You can install your kernel there.
+In the sotu environment, run:
+python -m ipykernel install \
+    --name sotu \
+    --display-name "Python (sotu)" \
+    --prefix /home/jovyan/.local/share/envs/sotu
+
+
+After running this, check again:
+jupyter kernelspec list
+
+
+You should see:
+sotu  /home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/sotu
+
+
+Then it will appear in the JupyterHub kernel menu.
+________________
+
+
+Option B — If Option A fails, you need admin installation
+If your JupyterHub restricts per-environment kernel prefixes, then only an admin can install kernels.
+The admin would run:
+conda activate sotu
+python -m ipykernel install --name sotu --display-name "Python (sotu)" --prefix=/usr/local
+
+
+But based on your paths, Option A should work.
+________________
+
+
+🎯 What to do next
+Run this inside your sotu environment:
+python -m ipykernel install \
+    --name sotu \
+    --display-name "Python (sotu)" \
+    --prefix /home/jovyan/.local/share/envs/sotu
+
+
+Then refresh JupyterHub and check whether the kernel appears.
+________________
+
+
+If you'd like, paste the updated output of:
+jupyter kernelspec list
+
+
+and I'll confirm everything is correct.
+Input: 
+ jupyter kernelspec list
+Available kernels:
+  python3    /home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/python3
+  sotu       /home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/sotu
+
+
+Output:
+Excellent — this is exactly what we wanted to see.
+Your sotu kernel is now installed inside the environment's Jupyter kernel directory, which JupyterHub does load:
+/home/jovyan/.local/share/envs/sotu/share/jupyter/kernels/sotu
+
+
+This means:
+✅ The kernel installation is now correct
+🎯 Your Hub should now show a kernel named "Python (sotu)" when you open a new notebook
+If you don’t see it immediately:
+🔄 Try these steps
+1. Reload the JupyterHub web page
+Just refresh your browser tab.
+2. If the notebook was already open, go to:
+Kernel → Change Kernel → Python (sotu)
+
+
+3. If it still doesn't appear, try restarting your single-user server:
+In JupyterHub:
+Control Panel → Stop My Server → Start My Server
+
+
+This forces JupyterHub to reload available kernels.
+________________
+
+
+✔️ Quick Test Once Kernel Appears
+Inside a new notebook, run:
+import sys
+sys.executable
+
+
+It should print:
+/home/jovyan/.local/share/envs/sotu/bin/python
+
+
+If you see that:
+🎉 Your new environment and kernel are working perfectly.
+________________
+
+
+If the kernel still does not appear after restarting the server, tell me — that probably means your JupyterHub has a kernel whitelist, and I’ll help you check that.
+Input: 
+from sklearn.feature_extraction.text import CountVectorizer
+
+
+# get index values for word list
+idx_vectorizer = CountVectorizer()
+idx_vectorizer.fit([sotu['Text'].iloc[0]])
+
+
+word_nums = {}
+for word in word_list:
+    idx = idx_vectorizer.vocabulary_.get(word)
+    word_nums[word] = idx
+
+
+word_nums
+
+
+What are the output values going into the dictionary? Are they the index values for each of the words in terms of when they appear in the speech?
+Output:
+Great question — and no, the values in word_nums are not the positions where the words appear in the speech.
+Let’s break it down clearly:
+________________
+
+
+✅ What the dictionary values actually represent
+When you do:
+idx_vectorizer = CountVectorizer()
+idx_vectorizer.fit([sotu['Text'].iloc[0]])
+
+
+you are building a vocabulary dictionary over the first speech.
+CountVectorizer assigns each unique token an integer index:
+            * The index corresponds to the column position that token would occupy
+in the bag-of-words matrix.
+
+            * It is not based on text order.
+
+            * It is not frequency-based unless you pass special parameters.
+
+            * It is simply an internal feature index used by scikit-learn.
+
+Example
+If the speech (after tokenization) had tokens:
+['we', 'are', 'here', 'to', 'serve', 'the', 'people']
+
+
+CountVectorizer might assign:
+{'are': 0, 'here': 1, 'people': 2, 'serve': 3, 'the': 4, 'to': 5, 'we': 6}
+
+
+The numbers are column indices, not order-of-appearance.
+________________
+
+
+❌ What the values are NOT
+They are NOT:
+               * the index of the word’s first occurrence
+
+               * the count of the word
+
+               * the TF-IDF value
+
+               * the position of the token in the raw text
+
+________________
+
+
+✅ What your dictionary means
+Your code produces:
+word_nums[word] = idx_vectorizer.vocabulary_.get(word)
+
+
+This means:
+➡️ word → what column index this word would occupy in the bag-of-words matrix
+ ➡️ None → the word does not appear in the speech at all
+That’s it.
+________________
+
+
+⭐ If you want the actual position(s) of a word in the speech
+I can give you code for that too — just say the word.
+________________
+
+
+If you want, I can also walk you through how to correctly extract:
+                  * the vocabulary index
+
+                  * the IDF value
+
+                  * the TF-IDF value for each word in word_list
+
+Just tell me!
+Input:
+What is the output of .idf_ attribute of vectorizer?
+Output:
+Great question — understanding .idf_ is key to making sense of TF-IDF.
+________________
+
+
+✅ What vectorizer.idf_ Represents
+After you fit a TfidfVectorizer, it computes an array called .idf_:
+vectorizer = TfidfVectorizer()
+X = vectorizer.fit_transform(documents)
+vectorizer.idf_
+
+
+This attribute is:
+➡️ A 1D NumPy array containing the IDF (Inverse Document Frequency) value for each feature/word in the vocabulary.
+➡️ The order of values exactly matches the order of vectorizer.vocabulary_, which is how scikit-learn indexes features.
+________________
+
+
+🔍 More Specifically
+Each entry corresponds to:
+[
+\text{idf}(t) = \log\left(\frac{1 + N}{1 + \text{df}(t)}\right) + 1
+]
+Where:
+                     * N = total number of documents
+
+                     * df(t) = number of documents containing term t
+
+This is a smoothed version of IDF used by scikit-learn.
+________________
+
+
+📌 Example
+Suppose your vocabulary (from vectorizer.vocabulary_) is:
+{'america': 0, 'people': 1, 'freedom': 2}
+
+
+Then:
+vectorizer.idf_
+
+
+may output:
+array([2.01, 1.40, 3.10])
+
+
+Interpretation:
+                        * "america" has IDF = 2.01 → somewhat uncommon across speeches
+
+                        * "people" has IDF = 1.40 → appears in many speeches (common)
+
+                        * "freedom" has IDF = 3.10 → rare term across speeches
+
+________________
+
+
+🔗 Important relationship
+The index in idf_ corresponds to the vocabulary index:
+idx = vectorizer.vocabulary_["people"]
+idf_value = vectorizer.idf_[idx]
+
+
+________________
+
+
+✔️ Summary
+vectorizer.idf_ is an array giving the IDF score of every word in the vocabulary, indexed in the same order as the columns of the TF-IDF matrix.
+________________
+
+
+If you'd like, I can show you a small snippet that prints each word next to its IDF value — just tell me!
+Input: 
+If I were to do vectorizer.idf_[index] with a desired word index (taken from the index list made using the prior code), would that give me the IDF value for that particular word?
+Output:
+Yes — exactly.
+If:
+                           * You used the same vectorizer (same vocabulary, same fitting),
+
+And you obtained a word’s index using
+
+idx = vectorizer.vocabulary_.get(word)
+                              * Then doing:
+vectorizer.idf_[idx]
+
+
+will give you the correct IDF value for that specific word.
+________________
+
+
+✅ Why This Works
+TfidfVectorizer stores:
+                              * vectorizer.vocabulary_ → maps each word to a column index
+
+                              * vectorizer.idf_ → an array where each entry corresponds to the IDF of the word at that column index
+
+So:
+Word
+	vocabulary_ index
+	idf_[index]
+	"america"
+	0
+	IDF value at position 0
+	"security"
+	37
+	IDF value at position 37
+	The mapping is 1-to-1 and aligned.
+________________
+
+
+🚨 Important Caution
+Your earlier code:
+idx_vectorizer = CountVectorizer()
+idx_vectorizer.fit([single_document])
+
+
+creates a different vocabulary from the one used in:
+vectorizer = TfidfVectorizer()
+vectorizer.fit(all_documents)
+
+
+If you mix them, the indices won’t match, so vectorizer.idf_[idx] will not correspond to the intended word.
+To get consistent indices, you must use the same vectorizer instance for:
+                                 * finding indices
+
+                                 * computing TF-IDF
+
+                                 * accessing .idf_
+
+________________
+
+
+✅ Correct Pattern
+vectorizer = TfidfVectorizer()
+matrix = vectorizer.fit_transform(sotu["Text"])  # fit on entire corpus
+
+
+word = "economy"
+idx = vectorizer.vocabulary_.get(word)
+
+
+idf_value = vectorizer.idf_[idx]
+print(word, idf_value)
+
+
+This gives the correct IDF score for "economy".
+________________
+
+
+If you want, I can help you rewrite your word_info() function so it reliably returns the index, IDF value, and TF-IDF value for any list of words.
+Input:
+# get idf values for the specific words in the word list
+
+
+idf_vectorizer = TfidfVectorizer()
+idf_vectorizer.fit([sotu['Text'].iloc[0]])
+
+
+idf_score = {}
+for word in word_list:
+    idx = word_nums[word]
+    idf = idf_vectorizer.idf_[idx]
+    idf_score[word] = idf
+
+
+idf_score
+
+
+This is the code I wrote to get the IDF scores for each of the desired words based on the index values from my previous code. The result is a float value of 1.0 for all of the words, which is not correct. Why is this?
+Output:
+Your results are all 1.0 because your code is computing IDF incorrectly — you're fitting the vectorizer on one single speech, not the entire corpus.
+That guarantees every word’s IDF = 1.0.
+Let’s break down why.
+________________
+
+
+✅ Why You Got IDF = 1.0 for Every Word
+You wrote:
+idf_vectorizer = TfidfVectorizer()
+idf_vectorizer.fit([sotu['Text'].iloc[0]])
+
+
+You're fitting the vectorizer on a list containing only one document — the first speech.
+IDF is computed as:
+[
+\text{IDF}(t) = \log\left(\frac{1 + N}{1 + df(t)}\right) + 1
+]
+If N = 1 (only one document) and df(t) = 1 (every word appears in that one document), then:
+[
+\text{IDF} = \log\left(\frac{1+1}{1+1}\right) + 1 = \log(1) + 1 = 1
+]
+So every word has IDF = 1.0, exactly what you saw.
+________________
+
+
+❗ The Bigger Issue: Your word_nums also came from a single-speech vocabulary
+Because you did:
+idx_vectorizer.fit([sotu['Text'].iloc[0]])
+
+
+your word indices (word_nums) are based only on that speech.
+Then you try to use them with:
+idf_vectorizer.fit([sotu['Text'].iloc[0]])
+
+
+Same problem: the vocabulary does not reflect the entire dataset, so indices and IDF values become meaningless.
+________________
+
+
+✅ How to Correctly Compute IDF for Specific Words
+You must fit the vectorizer on the entire corpus:
+vectorizer = TfidfVectorizer()
+matrix = vectorizer.fit_transform(sotu["Text"])  # Fit on ALL speeches
+
+
+Now you can compute IDF for the words:
+idf_score = {}
+for word in word_list:
+    idx = vectorizer.vocabulary_.get(word)
+    if idx is not None:
+        idf_score[word] = vectorizer.idf_[idx]
+    else:
+        idf_score[word] = None   # word not in vocabulary
+
+
+This gives correct, varied IDF values.
+________________
+
+
+📌 Summary
+You got all 1.0 because:
+                                    * You fit the vectorizer on one document, not the full dataset.
+
+                                    * IDF on a single document always collapses to 1.0.
+
+Fix by fitting on the full corpus to get meaningful IDF scores.
+________________
+
+
+If you'd like, I can help you rewrite word_info() to cleanly return:
+                                       * the index of each word
+
+                                       * its IDF
+
+                                       * its TF-IDF score within a given speech
+
+
+
+
+
+
+
+
+
+
+
+
+
+CHAR:
+
+
+
+
+Q1: whats .plot method for panda series
+
+
+The .plot() method for pandas Series creates a line plot by default. Here are the common uses:
+Basic Line Plot
+python
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+sou['column_name'].plot()
+plt.show()
+Common Plot Types
+python
+# Line plot (default)
+sou['year'].plot()
+
+
+# Bar plot
+sou['year'].plot(kind='bar')
+
+
+# Histogram
+sou['word_count'].plot(kind='hist')
+
+
+# Box plot
+sou['word_count'].plot(kind='box')
+
+
+# Area plot
+sou['year'].plot(kind='area')
+
+
+# Scatter plot
+sou['year'].plot(kind='scatter', x='year', y='word_count')
+Customize the Plot
+python
+sou['word_count'].plot(
+    kind='line',
+    title='Word Count Over Time',
+    xlabel='Year',
+    ylabel='Word Count',
+    figsize=(12, 6),
+    color='blue',
+    linewidth=2
+)
+plt.show()
+Common Parameters
+python
+series.plot(
+    kind='line',           # Type: 'line', 'bar', 'hist', 'box', etc.
+    title='My Title',      # Plot title
+    xlabel='X axis',       # X-axis label
+    ylabel='Y axis',       # Y-axis label
+    figsize=(10, 6),       # Figure size (width, height)
+    color='red',           # Line/bar color
+    legend=True,           # Show legend
+    grid=True,             # Show grid
+)
+For SOTU data example:
+python
+# Plot number of words per speech
+sou.plot(y='word_count', kind='line', title='SOTU Word Count Over Time')
+
+
+# Or if sou has year as index:
+sou['word_count'].plot(title='SOTU Word Count', figsize=(12, 5))
+plt.xlabel('Year')
+plt.ylabel('Word Count')
+plt.show()
+
+
+
+
+Q2:
+
+
+whats wrong with this code? #Save Plot to outputs plt.savefig('outputs/' + eventname+'speeches_per_president'+plottype)
+ChatGPT said:
+Your plt.savefig() line is almost correct — there are a few common issues that could be causing it to fail:
+________________
+
+
+✅ Most Likely Problems
+1. outputs/ folder does NOT exist
+savefig will fail silently or throw an error if the directory doesn’t exist.
+Fix:
+import os
+os.makedirs("outputs", exist_ok=True)
+
+
+________________
+
+
+2. You forgot the dot before the file extension
+If plottype is something like "png" instead of ".png", the filename will be wrong:
+❌ "speeches_per_presidentpng"
+ ✔ "speeches_per_president.png"
+Fix:
+plt.savefig(f"outputs/{eventname}_speeches_per_president.{plottype}")
+
+
+or ensure plottype starts with ".".
+________________
+
+
+3. eventname contains spaces or illegal filename characters
+For example: "State of the Union" → creates "State of the Unionspeeches...", which may be okay but sometimes problematic.
+________________
+
+
+4. You forgot to import matplotlib.pyplot
+import matplotlib.pyplot as plt
+
+
+________________
+
+
+5. You're calling savefig before creating the plot
+Make sure plt.plot() (or df.plot()) happens before savefig.
+Q3
+
+
+its not giving me the correct distribution # Use value counts and sort by years counts= sou["Word Count"].value_counts() # Sort in order of SOTU.csv #order_wordcount= sou["Word Count"].unique() #counts = counts.reindex(order_wordcount) # Plot number of state of union speeches per year and add personal flare sns.histplot(data=counts, bins=10) plt.title('Distribution of State of the Union Speech Word Counts') plt.xlabel('Word Count') plt.ylabel('Count') plt.show()
+ChatGPT said:
+You're very close — the issue is that value_counts() destroys the original distribution.
+🔥 The key point:
+value_counts() gives you counts of each unique word count, not the actual distribution of word counts.
+So instead of plotting the actual values like:
+2100
+1980
+2100
+3500
+...
+
+
+You're plotting something like:
+WordCount = 2100 → 5 speeches
+WordCount = 1980 → 3 speeches
+...
+
+
+That is not what a histogram needs.
+________________
+
+
+✅ Fix: Use the raw "Word Count" column in the histogram
+Do NOT use value_counts() for a histogram.
+A histogram already counts frequencies visually.
+Correct code:
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+sns.histplot(sou["Word Count"], bins=10)
+plt.title('Distribution of State of the Union Speech Word Counts')
+plt.xlabel('Word Count')
+plt.ylabel('Frequency')
+
+
+plt.show()
+
+
+________________
+
+
+🧠 Why this works
+                                          * Histograms expect raw numerical data, not pre-counted values.
+
+                                          * Pandas .value_counts() is only for bar plots of categories, not histograms.
+
+________________
+
+
+🛠️ If you do want a bar chart of how many speeches had the same word count:
+counts = sou["Word Count"].value_counts().sort_index()
+
+
+counts.plot(kind="bar", figsize=(12,4))
+plt.title("Counts of Unique Word Counts")
+plt.xlabel("Word Count")
+plt.ylabel("Number of Speeches")
+plt.show()
+
+
+________________
+
+
+If you tell me what the plot should look like, I can help you match it exactly!
+
+
+Input: combined_speeches is a dictionary of strings of president speeches, why am i getting this error?
+---------------------------------------------------------------------------
+KeyError                                  Traceback (most recent call last)
+Cell In[11], line 19
+     17 for i in range(n):
+     18     for j in range(n):
+---> 19         similarity_matrix[i, j] = combined_speeches[i].similarity(combined_speeches[j])
+
+
+KeyError: 0
+
+
+Output: 
+Ah! That error happens because of how you’re trying to index combined_speeches.
+Let’s break it down:
+________________
+
+
+🔍 What’s going on
+combined_speeches[i]
+
+
+                                             * combined_speeches is a dictionary where keys are president names, not numbers.
+
+                                             * So combined_speeches[0] → KeyError, because 0 is not a president name.
+
+Dictionaries don’t support integer indexing like lists.
+________________
+
+
+✅ Correct way
+If you want to iterate by index, first convert the dictionary to lists of names and docs:
+# Convert to lists
+names = list(combined_speeches.keys())            # ['Barack Obama', 'Donald Trump', ...]
+texts = list(combined_speeches.values())          # corresponding long text for each president
+
+
+# Turn texts into spaCy docs
+docs = [nlp(text) for text in texts]
+
+
+________________
+
+
+2️⃣ Build the similarity matrix
+import numpy as np
+
+
+n = len(docs)
+similarity_matrix = np.zeros((n, n))
+
+
+for i in range(n):
+    for j in range(n):
+        similarity_matrix[i, j] = docs[i].similarity(docs[j])
+
+
+                                                * Now docs[i] and docs[j] are spaCy Doc objects, which have .similarity() method.
+
+                                                * similarity_matrix is an n x n numpy array of similarity scores.
+
+________________
+
+
+3️⃣ Optional: make a DataFrame for readability
+import pandas as pd
+
+
+sim_df = pd.DataFrame(similarity_matrix, index=names, columns=names)
+sim_df
+
+
+                                                   * Now you can see which presidents are most similar easily.
+
+                                                   * Can also visualize with a heatmap.
+
+________________
+
+
+✅ Key takeaway:
+                                                      * combined_speeches is a dictionary keyed by president names → cannot index with integers.
+
+                                                      * Convert to lists of names and texts before computing similarities.
+
+________________
+
+
+If you want, I can write a ready-to-run version that computes the similarity matrix and finds the most similar pair automatically. Do you want me to do that?
+Input: how would I find the associated indices of a value in a matrix
+
+
+Output: You can find the row and column indices of a specific value (or values meeting a condition) in a NumPy matrix using np.where. Here’s how:
+________________
+
+
+1️⃣ Example matrix
+import numpy as np
+
+
+matrix = np.array([
+    [1, 0.8, 0.6],
+    [0.8, 1, 0.5],
+    [0.6, 0.5, 1]
+])
+
+
+________________
+
+
+2️⃣ Find indices of a specific value
+value_to_find = 0.8
+rows, cols = np.where(matrix == value_to_find)
+
+
+                                                         * rows → array of row indices
+
+                                                         * cols → array of column indices
+
+print(list(zip(rows, cols)))
+
+
+Output:
+[(0, 1), (1, 0)]
+
+
+Shows all positions where the value 0.8 occurs.
+________________
+
+
+3️⃣ Find indices of all values above a threshold
+threshold = 0.7
+rows, cols = np.where(matrix > threshold)
+print(list(zip(rows, cols)))
+
+
+Output:
+[(0, 0), (0, 1), (1, 0), (1, 1)]
+
+
+Includes all entries greater than 0.7 (diagonal included).
+________________
+
+
+4️⃣ Notes
+                                                            * np.where works elementwise and returns a tuple of arrays (rows, cols).
+
+                                                            * You can zip them to get (row, col) pairs.
+
+                                                            * Mask the diagonal if needed to avoid self-comparison:
+
+np.fill_diagonal(matrix, 0)
+
+
+________________
+
+
+If you want, I can show a ready-to-use snippet that finds the top N similarity scores and their corresponding presidents from your SOTU similarity matrix.
+Do you want me to do that?
+Input: How would i get just the numbers from this (array([22, 23]), array([23, 22]))
+
+
+Output: The output you have:
+(array([22, 23]), array([23, 22]))
+
+
+is a tuple of NumPy arrays — the first array is the row indices, the second array is the column indices.
+If you want just the numbers as pairs, you can use zip:
+rows, cols = (np.array([22, 23]), np.array([23, 22]))
+pairs = list(zip(rows, cols))
+print(pairs)
+
+
+Output:
+[(22, 23), (23, 22)]
+
+
+✅ Now you have a list of (row, column) tuples.
+________________
+
+
+Alternative: flatten into two lists
+rows, cols = (np.array([22, 23]), np.array([23, 22]))
+
+
+row_list = rows.tolist()
+col_list = cols.tolist()
+
+
+print(row_list)  # [22, 23]
+print(col_list)  # [23, 22]
+
+
+                                                               * zip(rows, cols) → pairs
+
+                                                               * rows.tolist() and cols.tolist() → separate lists of numbers
+
+________________
+
+
+Do you want these as pairs or as two separate lists?
+Input: print("The most similar speeches were delivered by " + president[pairs_int[1]] + " and " + president[pairs_int[j]]"
+
+
+Output: I see what you’re trying to do — print the names of the most similar presidents — but the code has a syntax error and a couple of issues:
+________________
+
+
+Issues:
+                                                                  1. president should probably be names (your list of president names).
+
+                                                                  2. pairs_int[1] gives a tuple (i, j), not a single index.
+
+                                                                  3. You cannot concatenate strings with a comma after the last +.
+
+________________
+
+
+✅ Correct way:
+# Suppose pairs_int[0] is the most similar pair
+i, j = pairs_int[0]  # unpack the tuple
+
+
+print("The most similar speeches were delivered by " + names[i] + " and " + names[j])
+
+
+________________
+
+
+🔹 Using f-strings (cleaner)
+i, j = pairs_int[0]
+print(f"The most similar speeches were delivered by {names[i]} and {names[j]}")
+
+
+                                                                     * More readable and avoids all the + concatenation issues.
+
+________________
+
+
+
+If you want, I can write a full ready-to-run snippet that finds the top 3 most similar president speeches and prints their names and similarity scores automatically.
+
+
+Param
+I used OpenAI's ChatGPT to understand some errors I encountered and to understand how to save some new figure types to the outputs directory.
+
+Prompt: from bertopic import BERTopic is giving ModuleNotFoundError: No module named 'bertopic'
+Response: A ModuleNotFoundError: No module named 'bertopic' means BERTopic isn’t installed in your environment, or it’s installed in a different environment than the one you're running.
+Here’s how to fix it depending on your setup:
+✅ 1. Install BERTopic Properly
+If using pip
+pip install bertopic
+If using pip in Jupyter Notebook
+Run this inside a cell:
+!pip install bertopic
+✅ 2. If you’re in a conda environment
+BERTopic requires some extra dependencies. Run:
+conda install -c conda-forge bertopic
+or if conda can’t find it:
+pip install bertopic
+Make sure you're installing into the same env that Jupyter uses:
+which python
+which pip
+
+Prompt: i did : lda_display = pyLDAvis.gensim_models.prepare(lda_model, corpus, dictionary) pyLDAvis.display(lda_display) is there any way to save this output to a folder? 
+Response: Yes — you can save a pyLDAvis visualization as an HTML file and store it in a folder. You don’t need to display it in Jupyter to save it.
+Here’s how:
+import pyLDAvis
+# Save the visualization as an HTML file
+pyLDAvis.save_html(lda_display, 'output/lda_visualization.html')
+Notes:
+	1	Make sure the folder exists:
+import os
+os.makedirs('output', exist_ok=True)
+	2	You can then open the HTML in a browser:
+	•	On your local machine: just double-click the file
+	•	Or in Jupyter: File → Open → output/lda_visualization.html
+	3	You can also share the HTML with others — they don’t need Python installed to view it.
+
+Prompt: how to save topic_model.visualize_distribution(topic_distr[0]) and topic_model.visualize_topics() to outputs direc
+Response: You can save both BERTopic visualizations to your outputs/ directory — they’re interactive plots, so they should be saved as HTML files.
+Here’s exactly how.
+1. Make sure the directory exists
+import os
+os.makedirs("outputs", exist_ok=True)
+2. Save the topic distribution visualization
+If this works for you:
+fig_dist = topic_model.visualize_distribution(topic_distr[0])
+Save it like this:
+fig_dist.write_html("outputs/topic_distribution_doc0.html")
+3. Save the topic overview visualization
+fig_topics = topic_model.visualize_topics()
+fig_topics.write_html("outputs/topic_overview.html")
+
